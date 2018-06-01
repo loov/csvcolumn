@@ -17,7 +17,7 @@ func ExampleReader() {
 	data.LazyQuotes = true
 	name, age := data.String("Name"), data.Int("Age")
 
-	for data.Next() || (data.Err() != nil) {
+	for data.Next() && data.Err() == nil {
 		fmt.Println(*name, *age)
 	}
 
