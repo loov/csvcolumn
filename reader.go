@@ -109,6 +109,7 @@ func (r *Reader) Next() (ok bool) {
 	}
 	if err != nil && r.err == nil {
 		r.err = err
+		return false
 	}
 
 	for i := range r.columns {
@@ -120,6 +121,7 @@ func (r *Reader) Next() (ok bool) {
 		err := column.Value.Scan(record[column.Index])
 		if err != nil && r.err == nil {
 			r.err = err
+			return false
 		}
 	}
 
