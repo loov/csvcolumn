@@ -1,3 +1,4 @@
+// Package csvcolumn reads specified columns from a csv style input.
 package csvcolumn
 
 import (
@@ -13,10 +14,14 @@ type Column struct {
 }
 
 const (
+	// IndexUnbound is an init value of a Column.Index
 	IndexUnbound = -2
+	// IndexMissing is an Column.Index value used when Column.Name was not
+	// found in the headers of the source
 	IndexMissing = -1
 )
 
+// NewReader is a factory function to create a *Reader
 func NewReader(src io.Reader) *Reader {
 	return &Reader{
 		Comma: ',',
@@ -24,6 +29,7 @@ func NewReader(src io.Reader) *Reader {
 	}
 }
 
+// Reader keeps the configuration and state of reading from source
 type Reader struct {
 	Comma               rune
 	Comment             rune
@@ -50,6 +56,8 @@ func (r *Reader) init() {
 	r.bind()
 }
 
+// bind parses the headers from source to validate columns of interest
+// are present in a header.
 func (r *Reader) bind() {
 	if len(r.headers) == 0 {
 		r.headers, r.err = r.parser.Read()
@@ -86,7 +94,8 @@ func (r *Reader) bind() {
 	}
 }
 
-func (r *Reader) Next() bool {
+// Next parses a next line from a source.
+func (r *Reader) Next() (ok bool) {
 	if r.parser == nil {
 		r.init()
 		if r.err != nil {
@@ -117,6 +126,7 @@ func (r *Reader) Next() bool {
 	return true
 }
 
+// Err returns the latest error of a reader.
 func (r *Reader) Err() error { return r.err }
 
 func (r *Reader) Bind(column string, value Value) {
@@ -138,5 +148,12 @@ func (r *Reader) IntColumn(column string) *Int {
 	return value
 }
 
+// String returns a pointer to a string field value of a
+//  * row where the reader currently is reading from
+//  * column passed as an argument
 func (r *Reader) String(column string) *string { return &r.StringColumn(column).Value }
-func (r *Reader) Int(column string) *int       { return &r.IntColumn(column).Value }
+
+// Int returns a pointer to an int field value of a
+//  * row where the reader currently is reading from
+//  * column passed as an argument
+func (r *Reader) Int(column string) *int { return &r.IntColumn(column).Value }
