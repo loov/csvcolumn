@@ -7,18 +7,18 @@ import (
 	"strings"
 )
 
-type Column struct {
-	Name  string
-	Index int
-	Value Value
+type Field struct {
+	Name   string
+	Column int
+	Value  Value
 }
 
 const (
-	// IndexUnbound is an init value of a Column.Index
-	IndexUnbound = -2
-	// IndexMissing is an Column.Index value used when Column.Name was not
+	// ColumnUnbound is an init value of a Field.Column
+	ColumnUnbound = -2
+	// ColumnMissing is an Field.Column value used when Field.Name was not
 	// found in the headers of the source
-	IndexMissing = -1
+	ColumnMissing = -1
 )
 
 // NewReader is a factory function to create a *Reader
@@ -38,11 +38,11 @@ type Reader struct {
 	TrimLeadingSpace    bool
 	CaseSensitiveHeader bool
 
-	r       io.Reader
-	err     error
-	parser  *csv.Reader
-	headers []string
-	columns []Column
+	r              io.Reader
+	err            error
+	parser         *csv.Reader
+	headers        []string
+	colsOfInterest []Field
 }
 
 func (r *Reader) init() {
@@ -56,7 +56,8 @@ func (r *Reader) init() {
 	r.bind()
 }
 
-// bind parses the headers from source to validate columns of interest
+// bind initializes the Reader reading state.
+// It parses the headers from source to validate columns of interest
 // are present in a header.
 func (r *Reader) bind() {
 	if len(r.headers) == 0 {
@@ -66,30 +67,30 @@ func (r *Reader) bind() {
 		}
 	}
 
-	for i := range r.columns {
-		column := &r.columns[i]
-		if column.Index >= 0 || column.Index == IndexMissing {
+	for i := range r.colsOfInterest {
+		field := &r.colsOfInterest[i]
+		if field.Column != ColumnUnbound {
 			continue
 		}
 
 		if r.CaseSensitiveHeader {
 			for k, header := range r.headers {
-				if column.Name == header {
-					column.Index = k
+				if field.Name == header {
+					field.Column = k
 					break
 				}
 			}
 		} else {
 			for k, header := range r.headers {
-				if strings.EqualFold(column.Name, header) {
-					column.Index = k
+				if strings.EqualFold(field.Name, header) {
+					field.Column = k
 					break
 				}
 			}
 		}
 
-		if column.Index == IndexUnbound {
-			column.Index = IndexMissing
+		if field.Column == ColumnUnbound {
+			field.Column = ColumnMissing
 		}
 	}
 }
@@ -112,13 +113,14 @@ func (r *Reader) Next() (ok bool) {
 		return false
 	}
 
-	for i := range r.columns {
-		column := &r.columns[i]
-		if column.Index < 0 {
+	for i := range r.colsOfInterest {
+		field := &r.colsOfInterest[i]
+		if field.Column < 0 {
 			continue
 		}
 
-		err := column.Value.Scan(record[column.Index])
+		cell := record[field.Column]
+		err := field.Value.Scan(cell)
 		if err != nil && r.err == nil {
 			r.err = err
 			return false
@@ -131,31 +133,33 @@ func (r *Reader) Next() (ok bool) {
 // Err returns the latest error of a reader.
 func (r *Reader) Err() error { return r.err }
 
-func (r *Reader) Bind(column string, value Value) {
+// Bind binds a column in a csv to its matching Value struct.
+// It's useful when you are interested in adding your own Value types.
+func (r *Reader) Bind(colName string, value Value) {
 	if r.parser != nil {
 		panic("binding must be done before calling Next")
 	}
-	r.columns = append(r.columns, Column{Name: column, Index: IndexUnbound, Value: value})
+	r.colsOfInterest = append(r.colsOfInterest,
+		Field{
+			Name:   colName,
+			Column: ColumnUnbound,
+			Value:  value,
+		},
+	)
 }
 
-func (r *Reader) StringColumn(column string) *String {
+// String returns a pointer to a string field value of a given colName
+// which is reassigned with every Next() call.
+func (r *Reader) String(colName string) *string {
 	value := &String{}
-	r.Bind(column, value)
-	return value
+	r.Bind(colName, value)
+	return &value.Value
 }
 
-func (r *Reader) IntColumn(column string) *Int {
+// Int returns a pointer to an int field value of a given colName which
+// is reassigned with every Next() call.
+func (r *Reader) Int(colName string) *int {
 	value := &Int{}
-	r.Bind(column, value)
-	return value
+	r.Bind(colName, value)
+	return &value.Value
 }
-
-// String returns a pointer to a string field value of a
-//  * row where the reader currently is reading from
-//  * column passed as an argument
-func (r *Reader) String(column string) *string { return &r.StringColumn(column).Value }
-
-// Int returns a pointer to an int field value of a
-//  * row where the reader currently is reading from
-//  * column passed as an argument
-func (r *Reader) Int(column string) *int { return &r.IntColumn(column).Value }
