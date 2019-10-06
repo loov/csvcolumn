@@ -2,12 +2,14 @@ package csvcolumn
 
 import "strconv"
 
-// Value interface defines functions for
-//  * creating a value from string
-//  * returning a string representation of a value
+// Value interface describes a way how different data types should be
+// scanned.
 type Value interface {
+	// Scan assigns a value from text
+	//
+	// An error should be returned if the value cannot be stored
+	// without loss of information.
 	Scan(text string) error
-	String() string
 }
 
 // String is a struct implementing the Value interface
@@ -20,10 +22,6 @@ func (value *String) Scan(text string) error {
 	return nil
 }
 
-func (value *String) String() string {
-	return value.Value
-}
-
 // Int is a struct implementing the Value interface
 type Int struct {
 	Value   int
@@ -34,8 +32,4 @@ type Int struct {
 func (value *Int) Scan(text string) error {
 	value.Value, value.Error = strconv.Atoi(text)
 	return value.Error
-}
-
-func (value *Int) String() string {
-	return strconv.Itoa(value.Value)
 }
