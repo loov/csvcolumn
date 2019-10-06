@@ -7,16 +7,16 @@ import (
 	"strings"
 )
 
-type Field struct {
+type field struct {
 	Name   string
 	Column int
 	Value  Value
 }
 
 const (
-	// ColumnUnbound is an init value of a Field.Column
+	// ColumnUnbound is an init value of a field.Column
 	ColumnUnbound = -2
-	// ColumnMissing is an Field.Column value used when Field.Name was not
+	// ColumnMissing is an field.Column value used when field.Name was not
 	// found in the headers of the source
 	ColumnMissing = -1
 )
@@ -38,11 +38,11 @@ type Reader struct {
 	TrimLeadingSpace    bool
 	CaseSensitiveHeader bool
 
-	r              io.Reader
-	err            error
-	parser         *csv.Reader
-	headers        []string
-	colsOfInterest []Field
+	r       io.Reader
+	err     error
+	parser  *csv.Reader
+	headers []string
+	fields  []field
 }
 
 func (r *Reader) init() {
@@ -67,8 +67,8 @@ func (r *Reader) bind() {
 		}
 	}
 
-	for i := range r.colsOfInterest {
-		field := &r.colsOfInterest[i]
+	for i := range r.fields {
+		field := &r.fields[i]
 		if field.Column != ColumnUnbound {
 			continue
 		}
@@ -113,8 +113,8 @@ func (r *Reader) Next() (ok bool) {
 		return false
 	}
 
-	for i := range r.colsOfInterest {
-		field := &r.colsOfInterest[i]
+	for i := range r.fields {
+		field := &r.fields[i]
 		if field.Column < 0 {
 			continue
 		}
@@ -135,31 +135,31 @@ func (r *Reader) Err() error { return r.err }
 
 // Bind binds a column in a csv to its matching Value struct.
 // It's useful when you are interested in adding your own Value types.
-func (r *Reader) Bind(colName string, value Value) {
+func (r *Reader) Bind(columnName string, value Value) {
 	if r.parser != nil {
 		panic("binding must be done before calling Next")
 	}
-	r.colsOfInterest = append(r.colsOfInterest,
-		Field{
-			Name:   colName,
+	r.fields = append(r.fields,
+		field{
+			Name:   columnName,
 			Column: ColumnUnbound,
 			Value:  value,
 		},
 	)
 }
 
-// String returns a pointer to a string field value of a given colName
+// String returns a pointer to a string field value of a given columnName
 // which is reassigned with every Next() call.
-func (r *Reader) String(colName string) *string {
+func (r *Reader) String(columnName string) *string {
 	value := &String{}
-	r.Bind(colName, value)
+	r.Bind(columnName, value)
 	return &value.Value
 }
 
-// Int returns a pointer to an int field value of a given colName which
+// Int returns a pointer to an int field value of a given columnName which
 // is reassigned with every Next() call.
-func (r *Reader) Int(colName string) *int {
+func (r *Reader) Int(columnName string) *int {
 	value := &Int{}
-	r.Bind(colName, value)
+	r.Bind(columnName, value)
 	return &value.Value
 }
