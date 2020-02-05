@@ -33,3 +33,23 @@ func (value *Int) Scan(text string) error {
 	value.Value, value.Error = strconv.Atoi(text)
 	return value.Error
 }
+
+func (value *Int) String() string {
+	return strconv.Itoa(value.Value)
+}
+
+// Float64 is a struct implementing the Value interface
+type Float64 struct {
+	Value   float64
+	Default float64
+	Error   error
+}
+
+func (value *Float64) Scan(text string) error {
+	value.Value, value.Error = strconv.ParseFloat(text, 64)
+	return value.Error
+}
+
+func (value *Float64) String() string {
+	return strconv.FormatFloat(value.Value, 'g', -1, 64)
+}

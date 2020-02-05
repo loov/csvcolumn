@@ -163,3 +163,11 @@ func (r *Reader) Int(columnName string) *int {
 	r.Bind(columnName, value)
 	return &value.Value
 }
+
+// Float64 returns a pointer to an float64 field value of a given columnName which
+// is reassigned with every Next() call.
+func (r *Reader) Float64(columnName string) *float64 {
+	value := &Float64{}
+	r.Bind(columnName, value)
+	return &value.Value
+}
